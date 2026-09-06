@@ -1,15 +1,13 @@
 /*
 OpenAI Client
-     │
-     ├── converte MCP Tools
-     │       ↓
-     │   LLM Tools
-     │
-     ├── envia pergunta
-     │
-     ├── identifica Tool Call
-     │
-     └── devolve resultado ao modelo
+ │
+ ├── Ask
+ │
+ ├── MCP Tool → LLM Tool
+ │
+ ├── extrai todas Tool Calls
+ │
+ └── devolve todos Tool Results
 */
 
 package openai
@@ -30,6 +28,11 @@ type ToolCall struct {
 	Arguments map[string]any
 }
 
+type ToolResult struct {
+	CallID string
+	Output string
+}
+
 type Client struct {
 	client sdk.Client
 	model  string
@@ -44,27 +47,12 @@ func New(model string) *Client {
 
 // Ask envia uma pergunta para o LLM e retorna a resposta.
 func (c *Client) Ask(ctx context.Context, question string, tools []*mcp.Tool) (*responses.Response, error) {
-	llmTools := make([]responses.ToolUnionParam, 0, len(tools))
-
-	for _, tool := range tools {
-		parameters, err := schemaToMap(tool.InputSchema)
-		if err != nil {
-			return nil, fmt.Errorf("convertendo schema da tool %s: %w", tool.Name, err)
-		}
-
-		llmTools = append(
-			llmTools,
-			responses.ToolUnionParam{
-				OfFunction: &responses.FunctionToolParam{
-					Name:        tool.Name,
-					Description: sdk.String(tool.Description),
-					Parameters:  parameters,
-				},
-			},
-		)
+	llmTools, err := convertTools(tools)
+	if err != nil {
+		return nil, err
 	}
 
-	response, err := c.client.Responses.New(
+	return c.client.Responses.New(
 		ctx,
 		responses.ResponseNewParams{
 			Model: c.model,
@@ -74,15 +62,12 @@ func (c *Client) Ask(ctx context.Context, question string, tools []*mcp.Tool) (*
 			Tools: llmTools,
 		},
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
 }
 
-// ExtractToolCall verifica se a resposta do LLM contém uma chamada de Tool e retorna os detalhes da chamada.
-func (c *Client) ExtractToolCall(response *responses.Response) (*ToolCall, bool, error) {
+// ExtractToolCalls extrai as chamadas de ferramentas (Tool Calls) da resposta do LLM.
+func (c *Client) ExtractToolCalls(response *responses.Response) ([]ToolCall, error) {
+	calls := make([]ToolCall, 0)
+
 	for _, item := range response.Output {
 		if item.Type != "function_call" {
 			continue
@@ -93,38 +78,58 @@ func (c *Client) ExtractToolCall(response *responses.Response) (*ToolCall, bool,
 		var arguments map[string]any
 
 		if err := json.Unmarshal([]byte(call.Arguments), &arguments); err != nil {
-			return nil, false, err
+			return nil, fmt.Errorf("decodificando argumentos da tool %s: %w", call.Name, err)
 		}
 
-		return &ToolCall{
-			ID:        call.CallID,
-			Name:      call.Name,
-			Arguments: arguments,
-		}, true, nil
+		calls = append(
+			calls,
+			ToolCall{
+				ID:        call.CallID,
+				Name:      call.Name,
+				Arguments: arguments,
+			},
+		)
 	}
 
-	return nil, false, nil
+	return calls, nil
 }
 
-// SendToolResult envia o resultado da execução de uma Tool de volta para o LLM.
-func (c *Client) SendToolResult(ctx context.Context, previousResponseID, callID, result string) (*responses.Response, error) {
+// SendToolResults envia os resultados das chamadas de ferramentas (Tool Calls) de volta para o LLM.
+func (c *Client) SendToolResults(
+	ctx context.Context,
+	previousResponseID string,
+	results []ToolResult,
+	tools []*mcp.Tool,
+) (*responses.Response, error) {
+	llmTools, err := convertTools(tools)
+	if err != nil {
+		return nil, err
+	}
+
+	inputs := make([]responses.ResponseInputItemUnionParam, 0, len(results))
+	for _, result := range results {
+		inputs = append(
+			inputs,
+			responses.ResponseInputItemUnionParam{
+				OfFunctionCallOutput: &responses.ResponseInputItemFunctionCallOutputParam{
+					CallID: sdk.String(result.CallID),
+					Output: responses.ResponseInputItemFunctionCallOutputOutputUnionParam{
+						OfString: sdk.String(result.Output),
+					},
+				},
+			},
+		)
+	}
+
 	return c.client.Responses.New(
 		ctx,
 		responses.ResponseNewParams{
 			Model:              c.model,
 			PreviousResponseID: sdk.String(previousResponseID),
 			Input: responses.ResponseNewParamsInputUnion{
-				OfInputItemList: []responses.ResponseInputItemUnionParam{
-					{
-						OfFunctionCallOutput: &responses.ResponseInputItemFunctionCallOutputParam{
-							CallID: sdk.String(callID),
-							Output: responses.ResponseInputItemFunctionCallOutputOutputUnionParam{
-								OfString: sdk.String(result),
-							},
-						},
-					},
-				},
+				OfInputItemList: inputs,
 			},
+			Tools: llmTools, // Inclui as ferramentas (Tools) para que o LLM possa continuar a interação com elas.
 		},
 	)
 }
@@ -140,6 +145,30 @@ func schemaToMap(schema any) (map[string]any, error) {
 
 	if err := json.Unmarshal(data, &result); err != nil {
 		return nil, err
+	}
+
+	return result, nil
+}
+
+func convertTools(tools []*mcp.Tool) ([]responses.ToolUnionParam, error) {
+	result := make([]responses.ToolUnionParam, 0, len(tools))
+
+	for _, tool := range tools {
+		parameters, err := schemaToMap(tool.InputSchema)
+		if err != nil {
+			return nil, fmt.Errorf("convertendo schema da tool %s: %w", tool.Name, err)
+		}
+
+		result = append(
+			result,
+			responses.ToolUnionParam{
+				OfFunction: &responses.FunctionToolParam{
+					Name:        tool.Name,
+					Description: sdk.String(tool.Description),
+					Parameters:  parameters,
+				},
+			},
+		)
 	}
 
 	return result, nil

@@ -7,6 +7,7 @@ import (
 
 	llm "github.com/CayoHenri/go-mcp-lab/internal/llm/openai"
 	mcpclient "github.com/CayoHenri/go-mcp-lab/internal/mcp/client"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 const maxIterations = 10
@@ -36,39 +37,68 @@ func (a *Agent) Run(ctx context.Context, question string) (string, error) {
 	}
 
 	for iteration := 1; iteration <= maxIterations; iteration++ {
-		toolCall, hasToolCall, err := a.llm.ExtractToolCall(response)
-
+		toolCalls, err := a.llm.ExtractToolCalls(response)
 		if err != nil {
-			return "", fmt.Errorf("interpretando tool call: %w", err)
+			return "", fmt.Errorf("interpretando tool calls: %w", err)
 		}
 
-		if !hasToolCall {
+		if len(toolCalls) == 0 {
 			return response.OutputText(), nil
 		}
 
 		fmt.Printf("\n[Iteração %d]\n", iteration)
 
-		fmt.Printf("Tool selecionada: %s\n", toolCall.Name)
+		toolResults := make([]llm.ToolResult, 0, len(toolCalls))
 
-		fmt.Printf("Argumentos: %+v\n", toolCall.Arguments)
+		for _, toolCall := range toolCalls {
+			fmt.Printf("Tool selecionada: %s\n", toolCall.Name)
 
-		result, err := a.mcp.CallTool(ctx, toolCall.Name, toolCall.Arguments)
-		if err != nil {
-			return "", fmt.Errorf("executando MCP tool %s: %w", toolCall.Name, err)
+			fmt.Printf("Argumentos: %+v\n", toolCall.Arguments)
+
+			result, err := a.mcp.CallTool(ctx, toolCall.Name, toolCall.Arguments)
+			if err != nil {
+				return "", fmt.Errorf("executando MCP tool %s: %w", toolCall.Name, err)
+			}
+
+			resultText, err := serializeToolResult(result)
+			if err != nil {
+				return "", fmt.Errorf("serializando resultado da tool %s: %w", toolCall.Name, err)
+			}
+
+			fmt.Printf("Resultado MCP: %s\n", resultText)
+
+			toolResults = append(
+				toolResults,
+				llm.ToolResult{
+					CallID: toolCall.ID,
+					Output: resultText,
+				},
+			)
 		}
 
-		resultJSON, err := json.Marshal(result.StructuredContent)
+		response, err = a.llm.SendToolResults(ctx, response.ID, toolResults, toolsResult.Tools)
 		if err != nil {
-			return "", fmt.Errorf("serializando resultado da tool: %w", err)
-		}
-
-		fmt.Printf("Resultado MCP: %s\n", string(resultJSON))
-
-		response, err = a.llm.SendToolResult(ctx, response.ID, toolCall.ID, string(resultJSON))
-		if err != nil {
-			return "", fmt.Errorf("enviando resultado ao LLM: %w", err)
+			return "", fmt.Errorf("enviando resultados ao LLM: %w", err)
 		}
 	}
 
 	return "", fmt.Errorf("limite máximo de %d iterações atingido", maxIterations)
+}
+
+func serializeToolResult(result *mcp.CallToolResult) (string, error) {
+	if result.StructuredContent != nil {
+		data, err := json.Marshal(result.StructuredContent)
+		if err != nil {
+			return "", err
+		}
+
+		return string(data), nil
+	}
+
+	data, err := json.Marshal(result.Content)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
 }

@@ -24,9 +24,10 @@ func main() {
 	agentClient := agent.New(mcpClient, llmClient)
 
 	question := `
-		Multiplique 10 por 5.
-		Depois divida o resultado por 2.
-	`
+	Calcule 10 mais 20.
+	Também calcule 50 vezes 4.
+	Depois me informe os dois resultados.
+`
 
 	response, err := agentClient.Run(ctx, question)
 	if err != nil {
