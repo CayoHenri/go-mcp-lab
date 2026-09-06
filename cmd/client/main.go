@@ -23,9 +23,12 @@ func main() {
 
 	agentClient := agent.New(mcpClient, llmClient)
 
-	question := "Quanto é 35 vezes 12?"
+	question := `
+		Multiplique 10 por 5.
+		Depois divida o resultado por 2.
+	`
 
-	response, err := agentClient.Run(ctx,question)
+	response, err := agentClient.Run(ctx, question)
 	if err != nil {
 		log.Fatal(err)
 	}
