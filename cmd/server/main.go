@@ -23,6 +23,15 @@ func main() {
 		tools.Greet,
 	)
 
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "calculate",
+			Description: "Realiza operações matemáticas básicas entre dois números",
+		},
+		tools.Calculate,
+	)
+
 	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		log.Fatal(err)
 	}

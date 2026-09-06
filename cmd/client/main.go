@@ -50,9 +50,11 @@ func main() {
 	callResult, err := session.CallTool(
 		ctx,
 		&mcp.CallToolParams{
-			Name: "greet",
+			Name: "calculate",
 			Arguments: map[string]any{
-				"name": "Caio",
+				"operation": "multiply",
+				"a":         35,
+				"b":         12,
 			},
 		},
 	)
