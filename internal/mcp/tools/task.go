@@ -10,6 +10,13 @@ import (
 	domaintask "github.com/CayoHenri/go-mcp-lab/internal/domain/task"
 )
 
+// TaskService define o contrato de serviço para gerenciar tarefas
+type TaskService interface {
+	Create(ctx context.Context, title string) (apptask.TaskOutput, error)
+	List(ctx context.Context) ([]apptask.TaskOutput, error)
+	Complete(ctx context.Context, id int) (apptask.TaskOutput, error)
+}
+
 type CreateTaskInput struct {
 	Title string `json:"title" jsonschema:"título da tarefa"`
 }
@@ -19,7 +26,7 @@ type CreateTaskOutput struct {
 }
 
 func CreateTask(
-	service *apptask.Service,
+	service TaskService,
 ) func(
 	context.Context,
 	*mcp.CallToolRequest,
@@ -48,7 +55,7 @@ type ListTasksOutput struct {
 }
 
 func ListTasks(
-	service *apptask.Service,
+	service TaskService,
 ) func(
 	context.Context,
 	*mcp.CallToolRequest,
@@ -79,7 +86,7 @@ type CompleteTaskOutput struct {
 }
 
 func CompleteTask(
-	service *apptask.Service,
+	service TaskService,
 ) func(
 	context.Context,
 	*mcp.CallToolRequest,
