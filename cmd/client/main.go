@@ -24,9 +24,15 @@ func main() {
 	agentClient := agent.New(mcpClient, llmClient)
 
 	question := `
-	Calcule 10 mais 20.
-	Também calcule 50 vezes 4.
-	Depois me informe os dois resultados.
+	Crie uma tarefa chamada "Aprender MCP".
+	Crie outra chamada "Aprender Agent Loop".
+
+	Liste as tarefas.
+
+	Depois conclua a tarefa "Aprender MCP".
+
+	Por fim, liste novamente as tarefas e me diga
+	qual está concluída e qual continua pendente.
 `
 
 	response, err := agentClient.Run(ctx, question)
