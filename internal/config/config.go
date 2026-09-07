@@ -3,26 +3,42 @@ package config
 import (
 	"fmt"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
-type Config struct {
-	DatabaseURL string
-	OpenAIKey   string
+func LoadEnv() {
+	_ = godotenv.Load()
 }
 
-func Load() (Config, error) {
+type ServerConfig struct {
+	DatabaseURL string
+}
+
+func LoadServer() (ServerConfig, error) {
+	LoadEnv()
+
 	databaseURL := os.Getenv("DATABASE_URL")
+
 	if databaseURL == "" {
-		return Config{}, fmt.Errorf("DATABASE_URL não configurada")
+		return ServerConfig{}, fmt.Errorf("DATABASE_URL não configurada")
 	}
 
-	openAIKey := os.Getenv("OPENAI_API_KEY")
-	if openAIKey == "" {
-		return Config{}, fmt.Errorf("OPENAI_API_KEY não configurada")
+	return ServerConfig{DatabaseURL: databaseURL}, nil
+}
+
+type ClientConfig struct {
+	OpenAIAPIKey string
+}
+
+func LoadClient() (ClientConfig, error) {
+	LoadEnv()
+
+	apiKey := os.Getenv("OPENAI_API_KEY")
+
+	if apiKey == "" {
+		return ClientConfig{}, fmt.Errorf("OPENAI_API_KEY não configurada")
 	}
 
-	return Config{
-		DatabaseURL: databaseURL,
-		OpenAIKey:   openAIKey,
-	}, nil
+	return ClientConfig{OpenAIAPIKey: apiKey}, nil
 }

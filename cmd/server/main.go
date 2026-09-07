@@ -15,7 +15,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	cfg, err := config.Load()
+	cfg, err := config.LoadServer()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,6 +25,10 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+
+	if err := postgresinfra.EnsureSchema(ctx, db); err != nil {
+		log.Fatal(err)
+	}
 
 	taskRepository := postgresinfra.NewTaskRepository(db)
 	taskService := apptask.NewService(taskRepository)
