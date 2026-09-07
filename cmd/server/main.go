@@ -7,21 +7,32 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	apptask "github.com/CayoHenri/go-mcp-lab/internal/application/task"
-	taskinfra "github.com/CayoHenri/go-mcp-lab/internal/infrastructure/task"
+	"github.com/CayoHenri/go-mcp-lab/internal/config"
+	postgresinfra "github.com/CayoHenri/go-mcp-lab/internal/infrastructure/persistence/postgres"
 	"github.com/CayoHenri/go-mcp-lab/internal/mcp/tools"
 )
 
 func main() {
-	taskRepository := taskinfra.NewMemoryRepository()
+	ctx := context.Background()
+
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db, err := postgresinfra.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	taskRepository := postgresinfra.NewTaskRepository(db)
 	taskService := apptask.NewService(taskRepository)
 
-	server := mcp.NewServer(
-		&mcp.Implementation{
-			Name:    "go-mcp-lab",
-			Version: "v0.1.0",
-		},
-		nil,
-	)
+	server := mcp.NewServer(&mcp.Implementation{
+		Name:    "go-mcp-lab",
+		Version: "v0.1.0",
+	}, nil)
 
 	mcp.AddTool(
 		server,

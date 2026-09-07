@@ -21,6 +21,14 @@ func New(id int, title string) (Task, error) {
 	}, nil
 }
 
+func Restore(id int, title string, completed bool) Task {
+	return Task{
+		id:        id,
+		title:     title,
+		completed: completed,
+	}
+}
+
 func (t *Task) Complete() {
 	t.completed = true
 }
