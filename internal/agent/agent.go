@@ -86,6 +86,20 @@ func (a *Agent) Run(ctx context.Context, question string) (string, error) {
 }
 
 func serializeToolResult(result *mcp.CallToolResult) (string, error) {
+	if result.IsError {
+		data, err := json.Marshal(
+			map[string]any{
+				"error":   true,
+				"content": result.Content,
+			},
+		)
+		if err != nil {
+			return "", err
+		}
+
+		return string(data), nil
+	}
+
 	if result.StructuredContent != nil {
 		data, err := json.Marshal(result.StructuredContent)
 		if err != nil {

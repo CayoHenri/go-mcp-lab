@@ -6,14 +6,22 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	apptask "github.com/CayoHenri/go-mcp-lab/internal/application/task"
+	taskinfra "github.com/CayoHenri/go-mcp-lab/internal/infrastructure/task"
 	"github.com/CayoHenri/go-mcp-lab/internal/mcp/tools"
-	"github.com/CayoHenri/go-mcp-lab/internal/task"
 )
 
 func main() {
-	server := mcp.NewServer(&mcp.Implementation{
-		Name: "go-mcp-lab", Version: "v0.1.0",
-	}, nil)
+	taskRepository := taskinfra.NewMemoryRepository()
+	taskService := apptask.NewService(taskRepository)
+
+	server := mcp.NewServer(
+		&mcp.Implementation{
+			Name:    "go-mcp-lab",
+			Version: "v0.1.0",
+		},
+		nil,
+	)
 
 	mcp.AddTool(
 		server,
@@ -33,15 +41,13 @@ func main() {
 		tools.Calculate,
 	)
 
-	taskStore := task.NewStore()
-
 	mcp.AddTool(
 		server,
 		&mcp.Tool{
 			Name:        "create_task",
 			Description: "Cria uma nova tarefa",
 		},
-		tools.CreateTask(taskStore),
+		tools.CreateTask(taskService),
 	)
 
 	mcp.AddTool(
@@ -50,7 +56,7 @@ func main() {
 			Name:        "list_tasks",
 			Description: "Lista todas as tarefas existentes",
 		},
-		tools.ListTasks(taskStore),
+		tools.ListTasks(taskService),
 	)
 
 	mcp.AddTool(
@@ -59,7 +65,7 @@ func main() {
 			Name:        "complete_task",
 			Description: "Marca uma tarefa como concluída pelo identificador",
 		},
-		tools.CompleteTask(taskStore),
+		tools.CompleteTask(taskService),
 	)
 
 	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {

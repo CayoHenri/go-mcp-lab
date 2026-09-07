@@ -2,10 +2,12 @@ package tools
 
 import (
 	"context"
+	"errors"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/CayoHenri/go-mcp-lab/internal/task"
+	apptask "github.com/CayoHenri/go-mcp-lab/internal/application/task"
+	domaintask "github.com/CayoHenri/go-mcp-lab/internal/domain/task"
 )
 
 type CreateTaskInput struct {
@@ -13,10 +15,12 @@ type CreateTaskInput struct {
 }
 
 type CreateTaskOutput struct {
-	Task task.Task `json:"task"`
+	Task apptask.TaskOutput `json:"task"`
 }
 
-func CreateTask(store *task.Store) func(
+func CreateTask(
+	service *apptask.Service,
+) func(
 	context.Context,
 	*mcp.CallToolRequest,
 	CreateTaskInput,
@@ -26,19 +30,26 @@ func CreateTask(store *task.Store) func(
 		req *mcp.CallToolRequest,
 		input CreateTaskInput,
 	) (*mcp.CallToolResult, CreateTaskOutput, error) {
-		created := store.Create(input.Title)
+		created, err := service.Create(ctx, input.Title)
+		if err != nil {
+			return toolError(err), CreateTaskOutput{}, nil
+		}
 
-		return nil, CreateTaskOutput{Task: created}, nil
+		return nil, CreateTaskOutput{
+			Task: created,
+		}, nil
 	}
 }
 
 type ListTasksInput struct{}
 
 type ListTasksOutput struct {
-	Tasks []task.Task `json:"tasks"`
+	Tasks []apptask.TaskOutput `json:"tasks"`
 }
 
-func ListTasks(store *task.Store) func(
+func ListTasks(
+	service *apptask.Service,
+) func(
 	context.Context,
 	*mcp.CallToolRequest,
 	ListTasksInput,
@@ -48,8 +59,13 @@ func ListTasks(store *task.Store) func(
 		req *mcp.CallToolRequest,
 		input ListTasksInput,
 	) (*mcp.CallToolResult, ListTasksOutput, error) {
+		tasks, err := service.List(ctx)
+		if err != nil {
+			return toolError(err), ListTasksOutput{}, nil
+		}
+
 		return nil, ListTasksOutput{
-			Tasks: store.List(),
+			Tasks: tasks,
 		}, nil
 	}
 }
@@ -59,10 +75,12 @@ type CompleteTaskInput struct {
 }
 
 type CompleteTaskOutput struct {
-	Task task.Task `json:"task"`
+	Task apptask.TaskOutput `json:"task"`
 }
 
-func CompleteTask(store *task.Store) func(
+func CompleteTask(
+	service *apptask.Service,
+) func(
 	context.Context,
 	*mcp.CallToolRequest,
 	CompleteTaskInput,
@@ -72,11 +90,17 @@ func CompleteTask(store *task.Store) func(
 		req *mcp.CallToolRequest,
 		input CompleteTaskInput,
 	) (*mcp.CallToolResult, CompleteTaskOutput, error) {
-		completed, err := store.Complete(input.ID)
+		completed, err := service.Complete(ctx, input.ID)
 		if err != nil {
-			return nil, CompleteTaskOutput{}, err
+			if errors.Is(err, domaintask.ErrNotFound) {
+				return toolError(err), CompleteTaskOutput{}, nil
+			}
+
+			return toolError(err), CompleteTaskOutput{}, nil
 		}
 
-		return nil, CompleteTaskOutput{Task: completed}, nil
+		return nil, CompleteTaskOutput{
+			Task: completed,
+		}, nil
 	}
 }

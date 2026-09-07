@@ -22,17 +22,13 @@ func main() {
 	llmClient := llmopenai.New("gpt-5.6-luna")
 
 	agentClient := agent.New(mcpClient, llmClient)
-
 	question := `
-	Crie uma tarefa chamada "Aprender MCP".
-	Crie outra chamada "Aprender Agent Loop".
+	Crie as tarefas "Estudar MCP" e "Estudar Go".
 
-	Liste as tarefas.
+	Depois tente concluir a tarefa de ID 99.
 
-	Depois conclua a tarefa "Aprender MCP".
-
-	Por fim, liste novamente as tarefas e me diga
-	qual está concluída e qual continua pendente.
+	Se ela não existir, liste as tarefas
+	e me informe quais IDs realmente existem.
 `
 
 	response, err := agentClient.Run(ctx, question)
