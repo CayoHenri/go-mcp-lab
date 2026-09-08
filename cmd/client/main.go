@@ -29,15 +29,7 @@ func main() {
 
 	agentClient := agent.New(mcpClient, llmClient)
 
-	question := `
-	Crie uma nova tarefa chamada "Estudar MCP Prompts".
-
-	Depois consulte o resumo das tarefas e me diga
-	quantas tarefas existem no total,
-	quantas estão pendentes e quantas estão concluídas.
-`
-
-	response, err := agentClient.Run(ctx, question)
+	response, err := agentClient.RunPrompt(ctx, "task-review", nil)
 	if err != nil {
 		log.Fatal(err)
 	}

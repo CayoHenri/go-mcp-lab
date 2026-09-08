@@ -103,3 +103,26 @@ func (c *Client) ListResourceTemplates(ctx context.Context) ([]*mcp.ResourceTemp
 
 	return templates, nil
 }
+
+// ListPrompts lista os Prompts disponíveis no MCP Server.
+func (c *Client) ListPrompts(ctx context.Context) ([]*mcp.Prompt, error) {
+	prompts := make([]*mcp.Prompt, 0)
+
+	for prompt, err := range c.session.Prompts(ctx, nil) {
+		if err != nil {
+			return nil, err
+		}
+
+		prompts = append(prompts, prompt)
+	}
+
+	return prompts, nil
+}
+
+// GetPrompt obtém um Prompt do MCP Server.
+func (c *Client) GetPrompt(ctx context.Context, name string, arguments map[string]string) (*mcp.GetPromptResult, error) {
+	return c.session.GetPrompt(ctx, &mcp.GetPromptParams{
+		Name:      name,
+		Arguments: arguments,
+	})
+}
