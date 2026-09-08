@@ -31,13 +31,23 @@ func (a *Agent) Run(ctx context.Context, question string) (string, error) {
 		return "", fmt.Errorf("listando MCP tools: %w", err)
 	}
 
-	response, err := a.llm.Ask(ctx, question, toolsResult.Tools)
+	resources, err := a.mcp.ListResources(ctx)
+	if err != nil {
+		return "", fmt.Errorf("listando MCP resources: %w", err)
+	}
+
+	templates, err := a.mcp.ListResourceTemplates(ctx)
+	if err != nil {
+		return "", fmt.Errorf("listando MCP resource templates: %w", err)
+	}
+
+	response, err := a.llm.Ask(ctx, question, toolsResult.Tools, resources, templates)
 	if err != nil {
 		return "", fmt.Errorf("consultando LLM: %w", err)
 	}
 
 	for iteration := 1; iteration <= maxIterations; iteration++ {
-		toolCalls, err := a.llm.ExtractToolCalls(response)
+		toolCalls, err := a.llm.ExtractFunctionCalls(response)
 		if err != nil {
 			return "", fmt.Errorf("interpretando tool calls: %w", err)
 		}
@@ -54,6 +64,20 @@ func (a *Agent) Run(ctx context.Context, question string) (string, error) {
 			fmt.Printf("Tool selecionada: %s\n", toolCall.Name)
 
 			fmt.Printf("Argumentos: %+v\n", toolCall.Arguments)
+
+			if toolCall.Name == "read_resource" {
+				resultText, err := a.readResource(ctx, toolCall.Arguments)
+				if err != nil {
+					return "", fmt.Errorf("lendo MCP resource: %w", err)
+				}
+
+				toolResults = append(toolResults, llm.ToolResult{
+					CallID: toolCall.ID,
+					Output: resultText,
+				})
+
+				continue
+			}
 
 			result, err := a.mcp.CallTool(ctx, toolCall.Name, toolCall.Arguments)
 			if err != nil {
@@ -76,13 +100,34 @@ func (a *Agent) Run(ctx context.Context, question string) (string, error) {
 			)
 		}
 
-		response, err = a.llm.SendToolResults(ctx, response.ID, toolResults, toolsResult.Tools)
+		response, err = a.llm.SendToolResults(ctx, response.ID, toolResults, toolsResult.Tools, resources, templates)
 		if err != nil {
 			return "", fmt.Errorf("enviando resultados ao LLM: %w", err)
 		}
 	}
 
 	return "", fmt.Errorf("limite máximo de %d iterações atingido", maxIterations)
+}
+
+func (a *Agent) readResource(ctx context.Context, arguments map[string]any) (string, error) {
+	uriValue, ok := arguments["uri"]
+
+	if !ok {
+		return "", fmt.Errorf("argumento uri não informado")
+	}
+
+	uri, ok := uriValue.(string)
+
+	if !ok || uri == "" {
+		return "", fmt.Errorf("argumento uri inválido")
+	}
+
+	result, err := a.mcp.ReadResource(ctx, uri)
+	if err != nil {
+		return "", err
+	}
+
+	return serializeResourceResult(result)
 }
 
 func serializeToolResult(result *mcp.CallToolResult) (string, error) {
@@ -112,6 +157,19 @@ func serializeToolResult(result *mcp.CallToolResult) (string, error) {
 	data, err := json.Marshal(result.Content)
 	if err != nil {
 		return "", err
+	}
+
+	return string(data), nil
+}
+
+func serializeResourceResult(result *mcp.ReadResourceResult) (string, error) {
+	if result == nil {
+		return "", fmt.Errorf("resultado de resource vazio")
+	}
+
+	data, err := json.Marshal(result.Contents)
+	if err != nil {
+		return "", fmt.Errorf("serializando resource: %w", err)
 	}
 
 	return string(data), nil

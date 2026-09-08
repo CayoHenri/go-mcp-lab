@@ -29,16 +29,24 @@ func LoadServer() (ServerConfig, error) {
 
 type ClientConfig struct {
 	OpenAIAPIKey string
+	AgentModel   string
 }
 
 func LoadClient() (ClientConfig, error) {
 	LoadEnv()
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
-
 	if apiKey == "" {
 		return ClientConfig{}, fmt.Errorf("OPENAI_API_KEY não configurada")
 	}
 
-	return ClientConfig{OpenAIAPIKey: apiKey}, nil
+	agentModel := os.Getenv("AGENT_MODEL")
+	if agentModel == "" {
+		return ClientConfig{}, fmt.Errorf("AGENT_MODEL não configurada")
+	}
+
+	return ClientConfig{
+		OpenAIAPIKey: apiKey,
+		AgentModel:   agentModel,
+	}, nil
 }

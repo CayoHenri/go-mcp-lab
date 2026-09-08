@@ -22,7 +22,7 @@ import (
 	"github.com/openai/openai-go/v3/responses"
 )
 
-type ToolCall struct {
+type FunctionCall struct {
 	ID        string
 	Name      string
 	Arguments map[string]any
@@ -38,6 +38,18 @@ type Client struct {
 	model  string
 }
 
+type Resource struct {
+	URI         string
+	Name        string
+	Description string
+}
+
+type ResourceTemplate struct {
+	URITemplate string
+	Name        string
+	Description string
+}
+
 func New(model string) *Client {
 	return &Client{
 		client: sdk.NewClient(),
@@ -46,27 +58,30 @@ func New(model string) *Client {
 }
 
 // Ask envia uma pergunta para o LLM e retorna a resposta.
-func (c *Client) Ask(ctx context.Context, question string, tools []*mcp.Tool) (*responses.Response, error) {
-	llmTools, err := convertTools(tools)
+func (c *Client) Ask(
+	ctx context.Context,
+	question string,
+	tools []*mcp.Tool,
+	resources []*mcp.Resource,
+	templates []*mcp.ResourceTemplate,
+) (*responses.Response, error) {
+	llmTools, err := convertTools(tools, resources, templates)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.client.Responses.New(
-		ctx,
-		responses.ResponseNewParams{
-			Model: c.model,
-			Input: responses.ResponseNewParamsInputUnion{
-				OfString: sdk.String(question),
-			},
-			Tools: llmTools,
+	return c.client.Responses.New(ctx, responses.ResponseNewParams{
+		Model: c.model,
+		Input: responses.ResponseNewParamsInputUnion{
+			OfString: sdk.String(question),
 		},
-	)
+		Tools: llmTools,
+	})
 }
 
-// ExtractToolCalls extrai as chamadas de ferramentas (Tool Calls) da resposta do LLM.
-func (c *Client) ExtractToolCalls(response *responses.Response) ([]ToolCall, error) {
-	calls := make([]ToolCall, 0)
+// // ExtractFunctionCalls extrai todas as Tool Calls da resposta do LLM.
+func (c *Client) ExtractFunctionCalls(response *responses.Response) ([]FunctionCall, error) {
+	calls := make([]FunctionCall, 0)
 
 	for _, item := range response.Output {
 		if item.Type != "function_call" {
@@ -83,7 +98,7 @@ func (c *Client) ExtractToolCalls(response *responses.Response) ([]ToolCall, err
 
 		calls = append(
 			calls,
-			ToolCall{
+			FunctionCall{
 				ID:        call.CallID,
 				Name:      call.Name,
 				Arguments: arguments,
@@ -94,14 +109,16 @@ func (c *Client) ExtractToolCalls(response *responses.Response) ([]ToolCall, err
 	return calls, nil
 }
 
-// SendToolResults envia os resultados das chamadas de ferramentas (Tool Calls) de volta para o LLM.
+// SendToolResults envia os resultados das chamadas de ferramentas (Tool Results) de volta para o LLM, permitindo que ele continue a interação com base nos resultados obtidos.
 func (c *Client) SendToolResults(
 	ctx context.Context,
 	previousResponseID string,
 	results []ToolResult,
 	tools []*mcp.Tool,
+	resources []*mcp.Resource,
+	templates []*mcp.ResourceTemplate,
 ) (*responses.Response, error) {
-	llmTools, err := convertTools(tools)
+	llmTools, err := convertTools(tools, resources, templates)
 	if err != nil {
 		return nil, err
 	}
@@ -150,8 +167,12 @@ func schemaToMap(schema any) (map[string]any, error) {
 	return result, nil
 }
 
-func convertTools(tools []*mcp.Tool) ([]responses.ToolUnionParam, error) {
-	result := make([]responses.ToolUnionParam, 0, len(tools))
+func convertTools(
+	tools []*mcp.Tool,
+	resources []*mcp.Resource,
+	templates []*mcp.ResourceTemplate,
+) ([]responses.ToolUnionParam, error) {
+	result := make([]responses.ToolUnionParam, 0, len(tools)+1)
 
 	for _, tool := range tools {
 		parameters, err := schemaToMap(tool.InputSchema)
@@ -159,16 +180,20 @@ func convertTools(tools []*mcp.Tool) ([]responses.ToolUnionParam, error) {
 			return nil, fmt.Errorf("convertendo schema da tool %s: %w", tool.Name, err)
 		}
 
-		result = append(
-			result,
-			responses.ToolUnionParam{
-				OfFunction: &responses.FunctionToolParam{
-					Name:        tool.Name,
-					Description: sdk.String(tool.Description),
-					Parameters:  parameters,
-				},
+		result = append(result, responses.ToolUnionParam{
+			OfFunction: &responses.FunctionToolParam{
+				Name:        tool.Name,
+				Description: sdk.String(tool.Description),
+				Parameters:  parameters,
 			},
-		)
+		})
+	}
+
+	if len(resources) > 0 || len(templates) > 0 {
+		result = append(result, resourceReaderTool(
+			resources,
+			templates,
+		))
 	}
 
 	return result, nil
