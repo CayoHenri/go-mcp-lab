@@ -56,6 +56,26 @@ func main() {
 		fmt.Println(content.Text)
 	}
 
+	templates, err := mcpClient.ListResourceTemplates(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Resource Templates disponíveis:")
+
+	for _, template := range templates {
+		fmt.Printf("- %s: %s\n", template.URITemplate, template.Description)
+	}
+
+	res, err := mcpClient.ReadResource(ctx, "tasks://1")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, content := range res.Contents {
+		fmt.Println(content.Text)
+	}
+
 	llmClient := llmopenai.New("gpt-5.6-luna")
 
 	agentClient := agent.New(mcpClient, llmClient)
