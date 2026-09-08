@@ -66,3 +66,25 @@ func (c *Client) CallTool(ctx context.Context, name string, arguments map[string
 		},
 	)
 }
+
+// ListResources lista os Resources disponíveis no MCP Server.
+func (c *Client) ListResources(ctx context.Context) ([]*mcp.Resource, error) {
+	resources := make([]*mcp.Resource, 0)
+
+	for resource, err := range c.session.Resources(ctx, nil) {
+		if err != nil {
+			return nil, err
+		}
+
+		resources = append(resources, resource)
+	}
+
+	return resources, nil
+}
+
+// ReadResource lê um Resource do MCP Server.
+func (c *Client) ReadResource(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
+	return c.session.ReadResource(ctx, &mcp.ReadResourceParams{
+		URI: uri,
+	})
+}

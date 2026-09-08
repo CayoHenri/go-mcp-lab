@@ -9,6 +9,7 @@ import (
 	apptask "github.com/CayoHenri/go-mcp-lab/internal/application/task"
 	"github.com/CayoHenri/go-mcp-lab/internal/config"
 	postgresinfra "github.com/CayoHenri/go-mcp-lab/internal/infrastructure/persistence/postgres"
+	mcpresources "github.com/CayoHenri/go-mcp-lab/internal/mcp/resources"
 	"github.com/CayoHenri/go-mcp-lab/internal/mcp/tools"
 )
 
@@ -37,6 +38,17 @@ func main() {
 		Name:    "go-mcp-lab",
 		Version: "v0.1.0",
 	}, nil)
+
+	server.AddResource(
+		&mcp.Resource{
+			URI:         mcpresources.TaskSummaryURI,
+			Name:        "task-summary",
+			Title:       "Resumo das tarefas",
+			Description: "Resumo das tarefas existentes, incluindo totais pendentes e concluídos",
+			MIMEType:    "application/json",
+		},
+		mcpresources.TaskSummary(taskService),
+	)
 
 	mcp.AddTool(
 		server,

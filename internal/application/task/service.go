@@ -48,3 +48,26 @@ func (s *Service) Complete(ctx context.Context, id int) (TaskOutput, error) {
 	}
 	return NewTaskOutput(task), nil
 }
+
+func (s *Service) Summary(ctx context.Context) (SummaryOutput, error) {
+	tasks, err := s.List(ctx)
+	if err != nil {
+		return SummaryOutput{}, err
+	}
+
+	output := SummaryOutput{
+		Total: len(tasks),
+		Tasks: tasks,
+	}
+
+	for _, task := range tasks {
+		if task.Completed {
+			output.Completed++
+			continue
+		}
+
+		output.Pending++
+	}
+
+	return output, nil
+}

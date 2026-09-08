@@ -25,13 +25,42 @@ func main() {
 	}
 	defer mcpClient.Close()
 
+	resources, err := mcpClient.ListResources(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Resources disponíveis:")
+
+	for _, resource := range resources {
+		fmt.Printf(
+			"- %s: %s\n",
+			resource.URI,
+			resource.Description,
+		)
+	}
+
+	result, err :=
+		mcpClient.ReadResource(
+			ctx,
+			"tasks://summary",
+		)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println()
+	fmt.Println("Conteúdo:")
+
+	for _, content := range result.Contents {
+		fmt.Println(content.Text)
+	}
+
 	llmClient := llmopenai.New("gpt-5.6-luna")
 
 	agentClient := agent.New(mcpClient, llmClient)
 	question := `
 	Liste todas as tarefas existentes.
-	Completo a ultima tarefa da lista.
-	Em seguida, liste novamente todas as tarefas existentes.
 	`
 
 	response, err := agentClient.Run(ctx, question)
