@@ -50,6 +50,17 @@ func main() {
 		mcpresources.TaskSummary(taskService),
 	)
 
+	server.AddResourceTemplate(
+		&mcp.ResourceTemplate{
+			URITemplate: mcpresources.TaskTemplateURI,
+			Name:        "task-by-id",
+			Title:       "Tarefa por ID",
+			Description: "Retorna os dados de uma tarefa específica pelo identificador",
+			MIMEType:    "application/json",
+		},
+		mcpresources.Task(taskService),
+	)
+
 	mcp.AddTool(
 		server,
 		&mcp.Tool{

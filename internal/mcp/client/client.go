@@ -88,3 +88,18 @@ func (c *Client) ReadResource(ctx context.Context, uri string) (*mcp.ReadResourc
 		URI: uri,
 	})
 }
+
+// ListResourceTemplates lista os ResourceTemplates disponíveis no MCP Server.
+func (c *Client) ListResourceTemplates(ctx context.Context) ([]*mcp.ResourceTemplate, error) {
+	templates := make([]*mcp.ResourceTemplate, 0)
+
+	for template, err := range c.session.ResourceTemplates(ctx, nil) {
+		if err != nil {
+			return nil, err
+		}
+
+		templates = append(templates, template)
+	}
+
+	return templates, nil
+}

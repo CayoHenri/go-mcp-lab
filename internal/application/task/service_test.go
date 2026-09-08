@@ -12,6 +12,7 @@ type repositoryFake struct {
 	createFn   func(context.Context, string) (domain.Task, error)
 	listFn     func(context.Context) ([]domain.Task, error)
 	completeFn func(context.Context, int) (domain.Task, error)
+	findByIDFn func(context.Context, int) (domain.Task, error)
 }
 
 func (r *repositoryFake) Create(ctx context.Context, title string) (domain.Task, error) {
@@ -36,6 +37,13 @@ func (r *repositoryFake) Complete(ctx context.Context, id int) (domain.Task, err
 	}
 
 	return r.completeFn(ctx, id)
+}
+
+func (r *repositoryFake) FindByID(ctx context.Context, id int) (domain.Task, error) {
+	if r.findByIDFn == nil {
+		return domain.Task{}, nil
+	}
+	return r.findByIDFn(ctx, id)
 }
 
 func TestServiceCreate(t *testing.T) {
@@ -245,5 +253,28 @@ func TestServiceCompleteNotFound(t *testing.T) {
 
 	if output != (TaskOutput{}) {
 		t.Errorf("esperado TaskOutput vazio, recebido %+v", output)
+	}
+}
+
+func TestServiceFindByID(t *testing.T) {
+	repository := &repositoryFake{
+		findByIDFn: func(ctx context.Context, id int) (domain.Task, error) {
+			task, err := domain.New(id, "Estudar MCP")
+			if err != nil {
+				return domain.Task{}, err
+			}
+			return task, nil
+		},
+	}
+
+	service := NewService(repository)
+
+	output, err := service.repository.FindByID(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+
+	if output.ID() != 1 {
+		t.Errorf("esperado ID 1, recebido %d", output.ID())
 	}
 }

@@ -65,3 +65,15 @@ func (m *MemoryRepository) List(ctx context.Context) ([]domain.Task, error) {
 
 	return tasks, nil
 }
+
+// FindByID implements [task.Repository].
+func (m *MemoryRepository) FindByID(ctx context.Context, id int) (domain.Task, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, task := range m.tasks {
+		if task.ID() == id {
+			return task, nil
+		}
+	}
+	return domain.Task{}, domain.ErrNotFound
+}

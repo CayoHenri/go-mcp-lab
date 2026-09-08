@@ -106,3 +106,23 @@ func (t *TaskRepository) List(ctx context.Context) ([]domain.Task, error) {
 
 	return tasks, nil
 }
+
+// FindByID implements [task.Repository].
+func (t *TaskRepository) FindByID(ctx context.Context, id int) (domain.Task, error) {
+	const query = `
+		SELECT id, title, completed
+		FROM tasks
+		WHERE id = $1
+	`
+	var (
+		taskID    int
+		title     string
+		completed bool
+	)
+
+	err := t.db.QueryRow(ctx, query, id).Scan(&taskID, &title, &completed)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Task{}, domain.ErrNotFound
+	}
+	return domain.Restore(taskID, title, completed), nil
+}

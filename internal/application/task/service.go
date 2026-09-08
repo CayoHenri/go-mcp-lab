@@ -71,3 +71,16 @@ func (s *Service) Summary(ctx context.Context) (SummaryOutput, error) {
 
 	return output, nil
 }
+
+func (s *Service) FindByID(ctx context.Context, id int) (TaskOutput, error) {
+	if id <= 0 {
+		return TaskOutput{}, domain.ErrInvalidID
+	}
+
+	task, err := s.repository.FindByID(ctx, id)
+	if err != nil {
+		return TaskOutput{}, err
+	}
+
+	return NewTaskOutput(task), nil
+}

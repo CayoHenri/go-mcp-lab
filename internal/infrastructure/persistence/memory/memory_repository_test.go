@@ -90,3 +90,21 @@ func TestMemoryRepositoryCompleteNotFound(t *testing.T) {
 		t.Fatalf("esperado ErrNotFound, recebido %v", err)
 	}
 }
+
+func TestMemoryRepositoryFindByID(t *testing.T) {
+	repository := NewMemoryRepository()
+	ctx := context.Background()
+	created, err := repository.Create(ctx, "Estudar MCP")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	found, err := repository.FindByID(ctx, created.ID())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if found.ID() != created.ID() {
+		t.Errorf("esperado ID %d, recebido %d", created.ID(), found.ID())
+	}
+}
