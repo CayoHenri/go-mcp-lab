@@ -9,16 +9,18 @@ import (
 )
 
 type Agent struct {
-	mcp     *mcpclient.Client
-	llm     *llm.Client
-	session *Session
+	mcp      *mcpclient.Client
+	llm      *llm.Client
+	session  *Session
+	approver Approver
 }
 
-func New(mcp *mcpclient.Client, llmClient *llm.Client) *Agent {
+func New(mcp *mcpclient.Client, llmClient *llm.Client, approver Approver) *Agent {
 	return &Agent{
-		mcp:     mcp,
-		llm:     llmClient,
-		session: NewSession(),
+		mcp:      mcp,
+		llm:      llmClient,
+		session:  NewSession(),
+		approver: approver,
 	}
 }
 

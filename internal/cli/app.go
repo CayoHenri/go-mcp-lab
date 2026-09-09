@@ -1,41 +1,41 @@
 package cli
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"strings"
+	"io"
 
 	"github.com/CayoHenri/go-mcp-lab/internal/agent"
 	mcpclient "github.com/CayoHenri/go-mcp-lab/internal/mcp/client"
 )
 
 type App struct {
-	mcp   *mcpclient.Client
-	agent *agent.Agent
+	mcp     *mcpclient.Client
+	agent   *agent.Agent
+	console *Console
 }
 
-func New(mcp *mcpclient.Client, agentClient *agent.Agent) *App {
+func New(mcp *mcpclient.Client, agentClient *agent.Agent, console *Console) *App {
 	return &App{
-		mcp:   mcp,
-		agent: agentClient,
+		mcp:     mcp,
+		agent:   agentClient,
+		console: console,
 	}
 }
 
 func (a *App) Run(ctx context.Context) error {
-	scanner := bufio.NewScanner(os.Stdin)
-
 	printHeader()
 
 	for {
-		fmt.Print("> ")
+		input, err := a.console.ReadLine("> ")
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
 
-		if !scanner.Scan() {
-			break
+			return err
 		}
 
-		input := strings.TrimSpace(scanner.Text())
 		if input == "" {
 			continue
 		}
@@ -49,10 +49,6 @@ func (a *App) Run(ctx context.Context) error {
 		if shouldExit {
 			break
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
 	}
 
 	fmt.Println()

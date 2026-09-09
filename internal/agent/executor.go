@@ -14,6 +14,17 @@ func (a *Agent) executeFunction(ctx context.Context, call llm.FunctionCall) (str
 
 	fmt.Printf("Argumentos: %+v\n", call.Arguments)
 
+	if requiresApproval(call) {
+		approved, err := a.requestApproval(ctx, call)
+		if err != nil {   
+			return "", fmt.Errorf("solicitando aprovação: %w", err)
+		}
+
+		if !approved {
+			return toolRejectedResult(call), nil
+		}
+	}
+
 	if call.Name == "read_resource" {
 		result, err := a.readResource(ctx, call.Arguments)
 		if err != nil {
