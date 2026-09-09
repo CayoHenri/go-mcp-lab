@@ -31,7 +31,7 @@ func promptToText(prompt *mcp.GetPromptResult) (string, error) {
 			continue
 		}
 
-		builder.WriteString(fmt.Sprintf("%s:\n%s\n\n", message.Role, textContent.Text))
+		fmt.Fprintf(&builder, "%s:\n%s\n\n", message.Role, textContent.Text)
 	}
 
 	result := strings.TrimSpace(builder.String())

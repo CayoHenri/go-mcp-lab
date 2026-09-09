@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/CayoHenri/go-mcp-lab/internal/agent"
+	"github.com/CayoHenri/go-mcp-lab/internal/cli"
 	"github.com/CayoHenri/go-mcp-lab/internal/config"
 	llmopenai "github.com/CayoHenri/go-mcp-lab/internal/llm/openai"
 	mcpclient "github.com/CayoHenri/go-mcp-lab/internal/mcp/client"
@@ -29,12 +29,9 @@ func main() {
 
 	agentClient := agent.New(mcpClient, llmClient)
 
-	response, err := agentClient.RunPrompt(ctx, "task-review", nil)
-	if err != nil {
+	app := cli.New(mcpClient, agentClient)
+
+	if err := app.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println()
-	fmt.Println("Resposta:")
-	fmt.Println(response)
 }

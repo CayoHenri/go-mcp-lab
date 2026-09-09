@@ -57,26 +57,33 @@ func New(model string) *Client {
 	}
 }
 
-// Ask envia uma pergunta para o LLM e retorna a resposta.
 func (c *Client) Ask(
 	ctx context.Context,
 	question string,
 	tools []*mcp.Tool,
 	resources []*mcp.Resource,
 	templates []*mcp.ResourceTemplate,
+	previousResponseID string,
 ) (*responses.Response, error) {
 	llmTools, err := convertTools(tools, resources, templates)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.client.Responses.New(ctx, responses.ResponseNewParams{
+	params := responses.ResponseNewParams{
 		Model: c.model,
 		Input: responses.ResponseNewParamsInputUnion{
 			OfString: sdk.String(question),
 		},
+
 		Tools: llmTools,
-	})
+	}
+
+	if previousResponseID != "" {
+		params.PreviousResponseID = sdk.String(previousResponseID)
+	}
+
+	return c.client.Responses.New(ctx, params)
 }
 
 // // ExtractFunctionCalls extrai todas as Tool Calls da resposta do LLM.
