@@ -46,7 +46,7 @@ func (a *Agent) runLoop(ctx context.Context, input string) (string, error) {
 		results := make([]llm.ToolResult, 0, len(functionCalls))
 
 		for _, call := range functionCalls {
-			resultText, err := a.executeFunction(ctx, call)
+			resultText, err := a.executeFunction(ctx, call, toolsResult.Tools)
 			if err != nil {
 				return "", fmt.Errorf("executando função %s: %w", call.Name, err)
 			}

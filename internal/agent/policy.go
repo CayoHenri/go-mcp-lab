@@ -1,42 +1,52 @@
 package agent
 
-type PermissionPolicy struct {
-	functions map[string]PermissionLevel
-}
+import "github.com/modelcontextprotocol/go-sdk/mcp"
+
+type PermissionPolicy struct{}
 
 func NewPermissionPolicy() *PermissionPolicy {
-	return &PermissionPolicy{
-		functions: map[string]PermissionLevel{
-			"greet":         PermissionRead,
-			"calculate":     PermissionRead,
-			"list_tasks":    PermissionRead,
-			"read_resource": PermissionRead,
-			"create_task":   PermissionWrite,
-			"complete_task": PermissionWrite,
-			"delete_task":   PermissionDestructive,
-		},
-	}
+	return &PermissionPolicy{}
 }
 
-func (p *PermissionPolicy) Level(functionName string) PermissionLevel {
-	level, ok := p.functions[functionName]
-	if !ok {
+func (p *PermissionPolicy) ToolLevel(tool *mcp.Tool) PermissionLevel {
+	if tool == nil {
 		return PermissionUnknown
 	}
 
-	return level
+	annotations := tool.Annotations
+
+	if annotations == nil {
+		return PermissionUnknown
+	}
+
+	if annotations.ReadOnlyHint {
+		return PermissionRead
+	}
+
+	if destructiveHint(annotations) {
+		return PermissionDestructive
+	}
+
+	return PermissionWrite
 }
 
-func (p *PermissionPolicy) RequiresApproval(functionName string) bool {
-	switch p.Level(functionName) {
-	case PermissionWrite, PermissionDestructive:
-		return true
+func (p *PermissionPolicy) InternalLevel(functionName string) PermissionLevel {
+	switch functionName {
+	case "read_resource":
+		return PermissionRead
 
 	default:
-		return false
+		return PermissionUnknown
 	}
 }
 
-func (p *PermissionPolicy) IsAllowedWithoutApproval(functionName string) bool {
-	return p.Level(functionName) == PermissionRead
+// No protocolo MCP: destructiveHint default = true
+// Ou seja, ausência não significa: false e sim true
+// O SDK representa isso com: *bool justamente para diferenciar: nil || false || true
+func destructiveHint(annotations *mcp.ToolAnnotations) bool {
+	if annotations.DestructiveHint == nil {
+		return true
+	}
+
+	return *annotations.DestructiveHint
 }

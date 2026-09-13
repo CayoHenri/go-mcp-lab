@@ -15,6 +15,10 @@ import (
 )
 
 func main() {
+	boolPtr := func(value bool) *bool {
+		return &value
+	}
+
 	ctx := context.Background()
 
 	cfg, err := config.LoadServer()
@@ -45,6 +49,12 @@ func main() {
 		&mcp.Tool{
 			Name:        "greet",
 			Description: "Cumprimenta uma pessoa pelo nome",
+			Annotations: &mcp.ToolAnnotations{
+				ReadOnlyHint:    true,
+				DestructiveHint: boolPtr(false),
+				IdempotentHint:  true,
+				OpenWorldHint:   boolPtr(false),
+			},
 		},
 		tools.Greet,
 	)
@@ -54,6 +64,12 @@ func main() {
 		&mcp.Tool{
 			Name:        "calculate",
 			Description: "Realiza operações matemáticas básicas entre dois números",
+			Annotations: &mcp.ToolAnnotations{
+				ReadOnlyHint:    true,
+				DestructiveHint: boolPtr(false),
+				IdempotentHint:  true,
+				OpenWorldHint:   boolPtr(false),
+			},
 		},
 		tools.Calculate,
 	)
@@ -63,6 +79,12 @@ func main() {
 		&mcp.Tool{
 			Name:        "create_task",
 			Description: "Cria uma nova tarefa",
+			Annotations: &mcp.ToolAnnotations{
+				ReadOnlyHint:    false,
+				DestructiveHint: boolPtr(false),
+				IdempotentHint:  false,
+				OpenWorldHint:   boolPtr(false),
+			},
 		},
 		tools.CreateTask(taskService),
 	)
@@ -71,7 +93,13 @@ func main() {
 		server,
 		&mcp.Tool{
 			Name:        "list_tasks",
-			Description: "Lista todas as tarefas existentes",
+			Description: "Lista todas as tarefas",
+			Annotations: &mcp.ToolAnnotations{
+				ReadOnlyHint:    true,
+				IdempotentHint:  true,
+				DestructiveHint: boolPtr(false),
+				OpenWorldHint:   boolPtr(false),
+			},
 		},
 		tools.ListTasks(taskService),
 	)
@@ -81,6 +109,12 @@ func main() {
 		&mcp.Tool{
 			Name:        "complete_task",
 			Description: "Marca uma tarefa como concluída pelo identificador",
+			Annotations: &mcp.ToolAnnotations{
+				ReadOnlyHint:    false,
+				DestructiveHint: boolPtr(false),
+				IdempotentHint:  true,
+				OpenWorldHint:   boolPtr(false),
+			},
 		},
 		tools.CompleteTask(taskService),
 	)
@@ -90,6 +124,12 @@ func main() {
 		&mcp.Tool{
 			Name:        "delete_task",
 			Description: "Exclui permanentemente uma tarefa pelo identificador",
+			Annotations: &mcp.ToolAnnotations{
+				ReadOnlyHint:    false,
+				DestructiveHint: boolPtr(true),
+				IdempotentHint:  true,
+				OpenWorldHint:   boolPtr(false),
+			},
 		},
 		tools.DeleteTask(taskService),
 	)

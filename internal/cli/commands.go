@@ -102,7 +102,6 @@ func (a *App) printTools(ctx context.Context) error {
 	}
 
 	for _, tool := range result.Tools {
-
 		fmt.Printf("- %s", tool.Name)
 
 		if tool.Description != "" {
@@ -110,6 +109,12 @@ func (a *App) printTools(ctx context.Context) error {
 		}
 
 		fmt.Println()
+
+		if tool.Annotations != nil {
+			fmt.Printf("  readOnly: %t\n", tool.Annotations.ReadOnlyHint)
+			fmt.Printf("  destructive: %t\n", destructiveValue(tool.Annotations.DestructiveHint))
+			fmt.Printf("  idempotent: %t\n", tool.Annotations.IdempotentHint)
+		}
 	}
 
 	fmt.Println()
@@ -200,4 +205,12 @@ func (a *App) printPrompts(ctx context.Context) error {
 	fmt.Println()
 
 	return nil
+}
+
+func destructiveValue(value *bool) bool {
+	if value == nil {
+		return true
+	}
+
+	return *value
 }

@@ -9,12 +9,12 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func (a *Agent) executeFunction(ctx context.Context, call llm.FunctionCall) (string, error) {
+func (a *Agent) executeFunction(ctx context.Context, call llm.FunctionCall, tools []*mcp.Tool) (string, error) {
 	fmt.Printf("Função selecionada: %s\n", call.Name)
 
 	fmt.Printf("Argumentos: %+v\n", call.Arguments)
 
-	authorized, err := a.authorize(ctx, call)
+	authorized, err := a.authorize(ctx, call, tools)
 	if err != nil {
 		return "", fmt.Errorf("autorizando função %s: %w", call.Name, err)
 	}
