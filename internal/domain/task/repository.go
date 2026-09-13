@@ -7,4 +7,5 @@ type Repository interface {
 	List(ctx context.Context) ([]Task, error)
 	Complete(ctx context.Context, id int) (Task, error)
 	FindByID(ctx context.Context, id int) (Task, error)
+	Delete(ctx context.Context, id int) error
 }

@@ -108,3 +108,16 @@ func TestMemoryRepositoryFindByID(t *testing.T) {
 		t.Errorf("esperado ID %d, recebido %d", created.ID(), found.ID())
 	}
 }
+
+func TestMemoryRepositoryDelete(t *testing.T) {
+	repository := NewMemoryRepository()
+	ctx := context.Background()
+	created, err := repository.Create(ctx, "Estudar MCP")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repository.Delete(ctx, created.ID()); err != nil {
+		t.Fatal(err)
+	}
+}

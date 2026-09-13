@@ -85,6 +85,15 @@ func main() {
 		tools.CompleteTask(taskService),
 	)
 
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "delete_task",
+			Description: "Exclui permanentemente uma tarefa pelo identificador",
+		},
+		tools.DeleteTask(taskService),
+	)
+
 	server.AddResource(
 		&mcp.Resource{
 			URI:         mcpresources.TaskSummaryURI,

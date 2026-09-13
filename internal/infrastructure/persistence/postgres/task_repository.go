@@ -126,3 +126,19 @@ func (t *TaskRepository) FindByID(ctx context.Context, id int) (domain.Task, err
 	}
 	return domain.Restore(taskID, title, completed), nil
 }
+
+// Delete implements [task.Repository].
+func (t *TaskRepository) Delete(ctx context.Context, id int) error {
+	const query = `DELETE FROM tasks WHERE id = $1 `
+
+	result, err := t.db.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("excluindo tarefa: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+
+	return nil
+}

@@ -13,6 +13,7 @@ type taskServiceFake struct {
 	createFn   func(context.Context, string) (apptask.TaskOutput, error)
 	listFn     func(context.Context) ([]apptask.TaskOutput, error)
 	completeFn func(context.Context, int) (apptask.TaskOutput, error)
+	deleteFn   func(context.Context, int) error
 }
 
 func (s *taskServiceFake) Create(ctx context.Context, title string) (apptask.TaskOutput, error) {
@@ -37,6 +38,14 @@ func (s *taskServiceFake) Complete(ctx context.Context, id int) (apptask.TaskOut
 	}
 
 	return s.completeFn(ctx, id)
+}
+
+func (s *taskServiceFake) Delete(ctx context.Context, id int) error {
+	if s.deleteFn == nil {
+		return nil
+	}
+
+	return s.deleteFn(ctx, id)
 }
 
 func TestCreateTask(t *testing.T) {
@@ -295,5 +304,38 @@ func TestCompleteTaskInvalidIDReturnsToolError(t *testing.T) {
 
 	if !result.IsError {
 		t.Error("esperado IsError true")
+	}
+}
+
+func TestDeleteTask(t *testing.T) {
+	var receivedID int
+
+	service := &taskServiceFake{
+		deleteFn: func(ctx context.Context, i int) error {
+			receivedID = i
+			return nil
+		},
+	}
+
+	handler := DeleteTask(service)
+
+	result, output, err := handler(context.Background(), nil, DeleteTaskInput{
+		ID: 1,
+	})
+
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+
+	if result != nil {
+		t.Fatal("esperado CallToolResult nil")
+	}
+
+	if receivedID != 1 {
+		t.Errorf("esperado ID 1 no service, recebido %d", receivedID)
+	}
+
+	if output.Message == "" {
+		t.Errorf("esperado menssagem")
 	}
 }

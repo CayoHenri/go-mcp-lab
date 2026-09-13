@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -15,6 +16,7 @@ type TaskService interface {
 	Create(ctx context.Context, title string) (apptask.TaskOutput, error)
 	List(ctx context.Context) ([]apptask.TaskOutput, error)
 	Complete(ctx context.Context, id int) (apptask.TaskOutput, error)
+	Delete(ctx context.Context, id int) error
 }
 
 type CreateTaskInput struct {
@@ -25,9 +27,7 @@ type CreateTaskOutput struct {
 	Task apptask.TaskOutput `json:"task"`
 }
 
-func CreateTask(
-	service TaskService,
-) func(
+func CreateTask(service TaskService) func(
 	context.Context,
 	*mcp.CallToolRequest,
 	CreateTaskInput,
@@ -54,9 +54,7 @@ type ListTasksOutput struct {
 	Tasks []apptask.TaskOutput `json:"tasks"`
 }
 
-func ListTasks(
-	service TaskService,
-) func(
+func ListTasks(service TaskService) func(
 	context.Context,
 	*mcp.CallToolRequest,
 	ListTasksInput,
@@ -85,9 +83,7 @@ type CompleteTaskOutput struct {
 	Task apptask.TaskOutput `json:"task"`
 }
 
-func CompleteTask(
-	service TaskService,
-) func(
+func CompleteTask(service TaskService) func(
 	context.Context,
 	*mcp.CallToolRequest,
 	CompleteTaskInput,
@@ -108,6 +104,38 @@ func CompleteTask(
 
 		return nil, CompleteTaskOutput{
 			Task: completed,
+		}, nil
+	}
+}
+
+type DeleteTaskInput struct {
+	ID int `json:"id" jsonschema:"identificador da tarefa que será excluída"`
+}
+
+type DeleteTaskOutput struct {
+	ID      int    `json:"id"`
+	Deleted bool   `json:"deleted"`
+	Message string `json:"message"`
+}
+
+func DeleteTask(service TaskService) func(
+	context.Context,
+	*mcp.CallToolRequest,
+	DeleteTaskInput,
+) (*mcp.CallToolResult, DeleteTaskOutput, error) {
+	return func(
+		ctx context.Context,
+		req *mcp.CallToolRequest,
+		input DeleteTaskInput,
+	) (*mcp.CallToolResult, DeleteTaskOutput, error) {
+		if err := service.Delete(ctx, input.ID); err != nil {
+			return toolError(err), DeleteTaskOutput{}, nil
+		}
+
+		return nil, DeleteTaskOutput{
+			ID:      input.ID,
+			Deleted: true,
+			Message: fmt.Sprintf("Tarefa %d excluída com sucesso", input.ID),
 		}, nil
 	}
 }

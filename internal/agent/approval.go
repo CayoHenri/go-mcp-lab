@@ -8,33 +8,21 @@ import (
 	llm "github.com/CayoHenri/go-mcp-lab/internal/llm/openai"
 )
 
+type ApprovalRequest struct {
+	Call            llm.FunctionCall
+	PermissionLevel PermissionLevel
+}
+
 type Approver interface {
-	Approve(ctx context.Context, call llm.FunctionCall) (bool, error)
+	Approve(ctx context.Context, request ApprovalRequest) (bool, error)
 }
 
-func requiresApproval(call llm.FunctionCall) bool {
-	switch call.Name {
-	case "create_task", "complete_task":
-		return true
-
-	default:
-		return false
-	}
-}
-
-func (a *Agent) requestApproval(ctx context.Context, call llm.FunctionCall) (bool, error) {
-	if a.approver == nil {
-		return false, nil
-	}
-
-	return a.approver.Approve(ctx, call)
-}
-
-func toolRejectedResult(call llm.FunctionCall) string {
+func functionRejectedResult(call llm.FunctionCall) string {
 	result := map[string]any{
 		"success":  false,
 		"rejected": true,
-		"message":  fmt.Sprintf("Execução da função %s não autorizada pelo usuário.", call.Name),
+		"function": call.Name,
+		"message":  fmt.Sprintf("Execução da função %s não autorizada.", call.Name),
 	}
 
 	data, err := json.Marshal(result)

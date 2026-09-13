@@ -13,6 +13,7 @@ type repositoryFake struct {
 	listFn     func(context.Context) ([]domain.Task, error)
 	completeFn func(context.Context, int) (domain.Task, error)
 	findByIDFn func(context.Context, int) (domain.Task, error)
+	deleteFn   func(context.Context, int) error
 }
 
 func (r *repositoryFake) Create(ctx context.Context, title string) (domain.Task, error) {
@@ -44,6 +45,13 @@ func (r *repositoryFake) FindByID(ctx context.Context, id int) (domain.Task, err
 		return domain.Task{}, nil
 	}
 	return r.findByIDFn(ctx, id)
+}
+
+func (r *repositoryFake) Delete(ctx context.Context, id int) error {
+	if r.deleteFn == nil {
+		return nil
+	}
+	return r.deleteFn(ctx, id)
 }
 
 func TestServiceCreate(t *testing.T) {
@@ -276,5 +284,22 @@ func TestServiceFindByID(t *testing.T) {
 
 	if output.ID() != 1 {
 		t.Errorf("esperado ID 1, recebido %d", output.ID())
+	}
+}
+
+func TestServiceDelete(t *testing.T) {
+	repository := &repositoryFake{
+		deleteFn: func(ctx context.Context, i int) error {
+			if _, err := domain.New(i, "Teste"); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	service := NewService(repository)
+	if err := service.repository.Delete(context.Background(), 1); err != nil {
+		t.Fatalf("erro inesperado: %v", err)
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	llm "github.com/CayoHenri/go-mcp-lab/internal/llm/openai"
+	"github.com/CayoHenri/go-mcp-lab/internal/agent"
 )
 
 type Approver struct {
@@ -19,19 +19,29 @@ func NewApprover(console *Console) *Approver {
 	}
 }
 
-func (a *Approver) Approve(ctx context.Context, call llm.FunctionCall) (bool, error) {
+func (a *Approver) Approve(ctx context.Context, request agent.ApprovalRequest) (bool, error) {
+	call := request.Call
+
 	arguments, err := json.MarshalIndent(call.Arguments, "", "  ")
 	if err != nil {
-		return false, fmt.Errorf("serializando argumentos: %w", err)
+		return false, err
 	}
 
 	fmt.Println()
 	fmt.Println("O agente deseja executar uma ação:")
 
 	fmt.Println()
+
 	fmt.Printf("Função: %s\n", call.Name)
 
+	fmt.Printf("Permissão: %s\n", request.PermissionLevel)
+
 	fmt.Printf("Argumentos:\n%s\n", arguments)
+
+	if request.PermissionLevel == agent.PermissionDestructive {
+		fmt.Println()
+		fmt.Println("ATENÇÃO: esta ação é destrutiva e pode remover dados permanentemente.")
+	}
 
 	fmt.Println()
 

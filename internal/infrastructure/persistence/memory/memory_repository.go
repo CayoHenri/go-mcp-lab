@@ -77,3 +77,21 @@ func (m *MemoryRepository) FindByID(ctx context.Context, id int) (domain.Task, e
 	}
 	return domain.Task{}, domain.ErrNotFound
 }
+
+// Delete implements [task.Repository].
+func (m *MemoryRepository) Delete(ctx context.Context, id int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for i, task := range m.tasks {
+		if task.ID() != id {
+			continue
+		}
+
+		m.tasks = append(m.tasks[:i], m.tasks[i+1:]...)
+
+		return nil
+	}
+
+	return domain.ErrNotFound
+}

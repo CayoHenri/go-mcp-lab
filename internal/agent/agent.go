@@ -13,6 +13,7 @@ type Agent struct {
 	llm      *llm.Client
 	session  *Session
 	approver Approver
+	policy   *PermissionPolicy
 }
 
 func New(mcp *mcpclient.Client, llmClient *llm.Client, approver Approver) *Agent {
@@ -21,6 +22,7 @@ func New(mcp *mcpclient.Client, llmClient *llm.Client, approver Approver) *Agent
 		llm:      llmClient,
 		session:  NewSession(),
 		approver: approver,
+		policy:   NewPermissionPolicy(),
 	}
 }
 

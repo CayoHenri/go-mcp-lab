@@ -84,3 +84,11 @@ func (s *Service) FindByID(ctx context.Context, id int) (TaskOutput, error) {
 
 	return NewTaskOutput(task), nil
 }
+
+func (s *Service) Delete(ctx context.Context, id int) error {
+	if id <= 0 {
+		return domain.ErrInvalidID
+	}
+
+	return s.repository.Delete(ctx, id)
+}
