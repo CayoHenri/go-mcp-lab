@@ -11,13 +11,32 @@ package client
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type Client struct {
 	session *mcp.ClientSession
+}
+
+// serverCommand monta o comando usado para subir o MCP Server como
+// subprocesso.
+//
+// Em desenvolvimento local, continua usando "go run ./cmd/server" (não
+// precisa compilar nada antes de rodar o client).
+//
+// Em produção/Docker, defina a env MCP_SERVER_BIN apontando para o binário
+// já compilado do server (ex: MCP_SERVER_BIN=/app/bin/server). Assim a
+// imagem final não precisa mais do toolchain do Go instalado.
+func serverCommand() *exec.Cmd {
+	if bin := strings.TrimSpace(os.Getenv("MCP_SERVER_BIN")); bin != "" {
+		return exec.Command(bin)
+	}
+
+	return exec.Command("go", "run", "./cmd/server")
 }
 
 func New(ctx context.Context) (*Client, error) {
@@ -32,11 +51,7 @@ func New(ctx context.Context) (*Client, error) {
 	session, err := mcpClient.Connect(
 		ctx,
 		&mcp.CommandTransport{
-			Command: exec.Command(
-				"go",
-				"run",
-				"./cmd/server",
-			),
+			Command: serverCommand(),
 		},
 		nil,
 	)

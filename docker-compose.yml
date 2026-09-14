@@ -13,5 +13,33 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mcp_lab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Lê OPENAI_API_KEY, AGENT_MODEL e DATABASE_URL do seu .env local
+    env_file:
+      - .env
+
+    environment:
+      # Sobrescreve o DATABASE_URL do .env: dentro da rede do compose
+      # o Postgres é acessado pelo nome do serviço, não por "localhost".
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/mcp_lab?sslmode=disable
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # CLI interativa (lê stdin para HITL, /tools, /reset etc.)
+    stdin_open: true
+    tty: true
+
 volumes:
   postgres_data:
